@@ -81,4 +81,4 @@ stages:
                     command: 'apply'
                     workingDirectory: '$(Pipeline.Workspace)/terraform-manifests-out'
                     commandOptions: '$(Pipeline.Workspace)/terraform-manifests-out/$(DEV_ENVIRONMENT)-$(Build.BuildId).out'
-                    environmentServiceNameAzureRM: 'Free Trial (33d2db97-de4b-424a-94c8-6ad57f004479)'
+                    environmentServiceNameAzureRM: 'Free Trial(33d2db97-de4b-424a-94c8-6ad57f004479)'
