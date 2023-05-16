@@ -73,5 +73,5 @@ stages:
                     provider: 'azurerm'
                     command: 'destroy'
                     workingDirectory: '$(Pipeline.Workspace)/terraform-manifests-out'
-                    commandOptions: '$(Pipeline.Workspace)/terraform-manifests-out/$(DEV_ENVIRONMENT)-$(Build.BuildId).out'
+                    commandOptions: '-auto-approve'
                     environmentServiceNameAzureRM: 'AKS creation'
