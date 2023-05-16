@@ -1,0 +1,77 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+- name: DEV_ENVIRONMENT
+  value: dev
+
+stages:
+  - stage: TerraformValidate
+    jobs:
+      - job: TerraformValidateJob
+        continueOnError: false
+        steps:
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)/terraform-manifests-aks'
+              artifact: 'terraform-manifests-out'
+              publishLocation: 'pipeline'
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: 'latest'
+          - task: TerraformTaskV4@4
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/terraform-manifests-aks'
+              backendServiceArm: 'Free Trial (33d2db97-de4b-424a-94c8-6ad57f004479)'
+              backendAzureRmResourceGroupName: 'str-rg'
+              backendAzureRmStorageAccountName: 'terraformstr548'
+              backendAzureRmContainerName: 'terraformstatefiles'
+              backendAzureRmKey: 'aks-base.tfstate'
+              
+          - task: TerraformTaskV4@4
+            inputs:
+              provider: 'azurerm'
+              command: 'validate'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/terraform-manifests-aks'
+  - stage: DestroyAKSClusters
+    jobs:
+      - deployment: DestroyDevAKSCluster
+        displayName: DestroyDevAKSCluster
+        pool: 
+          vmImage: 'ubuntu-latest'
+        environment: $(DEV_ENVIRONMENT)
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadSecureFile@1
+                  name: sshkey
+                  inputs:
+                    secureFile: 'aksprodsshkey.pub'
+                - task: TerraformTaskV4@4
+                  inputs:
+                    provider: 'azurerm'
+                    command: 'init'
+                    workingDirectory: '$(Pipeline.Workspace)/terraform-manifests-out'
+                    backendServiceArm: 'Free Trial (33d2db97-de4b-424a-94c8-6ad57f004479)'
+                    backendAzureRmResourceGroupName: 'str-rg'
+                    backendAzureRmStorageAccountName: 'terraformstr548'
+                    backendAzureRmContainerName: 'terraformstatefiles'
+                    backendAzureRmKey: 'aks-$(DEV_ENVIRONMENT).tfstate'
+                - task: TerraformTaskV4@4
+                  inputs:
+                    provider: 'azurerm'
+                    command: 'destroy'
+                    workingDirectory: '$(Pipeline.Workspace)/terraform-manifests-out'
+                    commandOptions: '$(Pipeline.Workspace)/terraform-manifests-out/$(DEV_ENVIRONMENT)-$(Build.BuildId).out'
+                    environmentServiceNameAzureRM: 'AKS creation'
